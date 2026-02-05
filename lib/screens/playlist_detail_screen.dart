@@ -18,7 +18,8 @@ class PlaylistDetailScreen extends StatelessWidget {
   Future<void> _pickFiles(BuildContext context) async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.audio,
+        type: FileType.custom,
+        allowedExtensions: ['mp3', 'm4a', 'wav', 'aac'],
         allowMultiple: true,
       );
 
