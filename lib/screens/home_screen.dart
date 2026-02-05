@@ -1,12 +1,119 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' show Material, InkWell, Colors, Icons;
+import 'package:flutter/material.dart' show Material, InkWell, Colors, Icons, LinearProgressIndicator, AlwaysStoppedAnimation;
 import 'package:provider/provider.dart';
 import 'package:ultimate_player/models/playlist.dart';
 import 'package:ultimate_player/providers/playlist_provider.dart';
 import 'package:ultimate_player/screens/playlist_detail_screen.dart';
+import 'package:ultimate_player/services/youtube_service.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
+
+  void _showDownloadDialog(BuildContext context) {
+    final TextEditingController _urlController = TextEditingController();
+    
+    showCupertinoDialog(
+      context: context,
+      barrierDismissible: true, // Allow clicking outside to dismiss if stuck
+      builder: (context) {
+        // Use a StatefulWidget to handle local state (progress)
+        return StatefulBuilder(
+          builder: (context, setState) {
+            double _progress = 0.0;
+            bool _isDownloading = false;
+            String _statusText = "Enter YouTube URL";
+
+            return CupertinoAlertDialog(
+              title: const Text("Download from YouTube"),
+              content: Column(
+                children: [
+                   const SizedBox(height: 10),
+                   if (!_isDownloading)
+                     CupertinoTextField(
+                       controller: _urlController,
+                       placeholder: "https://youtu.be/...",
+                       style: const TextStyle(color: CupertinoColors.label),
+                     )
+                   else
+                     Column(
+                       children: [
+                         Text(_statusText, style: const TextStyle(fontSize: 12)),
+                         const SizedBox(height: 10),
+                         LinearProgressIndicator(value: _progress, backgroundColor: CupertinoColors.systemGrey5, valueColor: const AlwaysStoppedAnimation(CupertinoColors.systemGreen)),
+                       ],
+                     ),
+                ],
+              ),
+              actions: [
+                if (!_isDownloading)
+                  CupertinoDialogAction(
+                    child: const Text("Cancel"),
+                    isDestructiveAction: true,
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                if (!_isDownloading)
+                  CupertinoDialogAction(
+                    child: const Text("Download"),
+                    isDefaultAction: true,
+                    onPressed: () async {
+                       if (_urlController.text.isEmpty) return;
+                       
+                       setState(() {
+                         _isDownloading = true;
+                         _statusText = "Analyzing...";
+                       });
+                       
+                       // Start Download
+                       try {
+                         final ytService = YouTubeService();
+                         final song = await ytService.downloadVideoAsAudio(
+                           _urlController.text, 
+                           (progress) {
+                              setState(() {
+                                _progress = progress;
+                                _statusText = "Downloading: ${(progress * 100).toInt()}%";
+                              });
+                           }
+                         );
+                         
+                         if (song != null) {
+                            if (context.mounted) {
+                              // Add to "Downloads" playlist
+                              final playlistProvider = Provider.of<PlaylistProvider>(context, listen: false);
+                              // Find or create "Downloads" playlist
+                              var downloadPlaylist = playlistProvider.playlists.firstWhere(
+                                (p) => p.name == "Downloads",
+                                orElse: () { 
+                                   playlistProvider.createPlaylist("Downloads");
+                                   return playlistProvider.playlists.firstWhere((p) => p.name == "Downloads");
+                                }
+                              );
+                              
+                              await playlistProvider.addSongsToPlaylist(downloadPlaylist, [song]);
+                              Navigator.pop(context); // Close dialog
+                            }
+                         } else {
+                            setState(() {
+                              _isDownloading = false;
+                              _statusText = "Download Failed. Check URL.";
+                            });
+                         }
+                         ytService.dispose();
+                       } catch (e) {
+                          setState(() {
+                             _isDownloading = false;
+                             _statusText = "Error: $e";
+                          });
+                       }
+                    },
+                  ),
+              ],
+            );
+          }
+        );
+      },
+    );
+  }
 
   void _showCreatePlaylistDialog(BuildContext context) {
     final TextEditingController _controller = TextEditingController();
@@ -48,12 +155,17 @@ class HomeScreen extends StatelessWidget {
     return CupertinoPageScaffold(
       backgroundColor: CupertinoColors.systemBackground,
       navigationBar: CupertinoNavigationBar(
-        backgroundColor: CupertinoColors.systemBackground,
+        backgroundColor: CupertinoColors.systemGreen,
         middle: const Text('Playlists', style: TextStyle(color: CupertinoColors.white)),
+        leading: CupertinoButton(
+          padding: EdgeInsets.zero,
+          child: const Icon(CupertinoIcons.cloud_download, color: CupertinoColors.white),
+          onPressed: () => _showDownloadDialog(context),
+        ),
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
           onPressed: () => _showCreatePlaylistDialog(context),
-          child: const Icon(CupertinoIcons.add, color: CupertinoColors.systemGreen),
+          child: const Icon(CupertinoIcons.add, color: CupertinoColors.white),
         ),
       ),
       child: Consumer<PlaylistProvider>(

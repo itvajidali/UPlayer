@@ -55,8 +55,9 @@ class PlaylistDetailScreen extends StatelessWidget {
     return CupertinoPageScaffold(
       backgroundColor: CupertinoColors.systemBackground,
       navigationBar: CupertinoNavigationBar(
-        backgroundColor: CupertinoColors.systemBackground,
-        middle: Text(playlist.name, style: const TextStyle(color: CupertinoColors.label)),
+        backgroundColor: CupertinoColors.systemGreen,
+        middle: Text(playlist.name, style: const TextStyle(color: CupertinoColors.white)),
+        leading: CupertinoNavigationBarBackButton(color: CupertinoColors.white, onPressed: () => Navigator.pop(context)),
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
           onPressed: () => _pickFiles(context),
@@ -132,7 +133,10 @@ class PlaylistDetailScreen extends StatelessWidget {
                  CupertinoButton(
                    color: CupertinoColors.systemGreen,
                    borderRadius: BorderRadius.circular(30),
-                   child: const Text("Import Songs"),
+                   child: const Text(
+                     "Import Songs", 
+                     style: TextStyle(color: CupertinoColors.white, fontWeight: FontWeight.bold)
+                   ),
                    onPressed: () => _pickFiles(context),
                  ),
               

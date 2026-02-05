@@ -46,7 +46,7 @@ class UltimatePlayerApp extends StatelessWidget {
           primaryColor: CupertinoColors.systemGreen,
           brightness: Brightness.dark,
           scaffoldBackgroundColor: CupertinoColors.black,
-          barBackgroundColor: CupertinoColors.black,
+          barBackgroundColor: CupertinoColors.systemGreen,
           textTheme: CupertinoTextThemeData(
             textStyle: TextStyle(color: CupertinoColors.white, inherit: false),
             navTitleTextStyle: TextStyle(color: CupertinoColors.white, fontWeight: FontWeight.bold, fontSize: 17, inherit: false),
