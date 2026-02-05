@@ -22,6 +22,7 @@ class HomeScreen extends StatelessWidget {
             double _progress = 0.0;
             bool _isDownloading = false;
             String _statusText = "Enter YouTube URL";
+            String? _errorMessage;
 
             return CupertinoAlertDialog(
               title: const Text("Download from YouTube"),
@@ -29,10 +30,19 @@ class HomeScreen extends StatelessWidget {
                 children: [
                    const SizedBox(height: 10),
                    if (!_isDownloading)
-                     CupertinoTextField(
-                       controller: _urlController,
-                       placeholder: "https://youtu.be/...",
-                       style: const TextStyle(color: CupertinoColors.label),
+                     Column(
+                       children: [
+                         CupertinoTextField(
+                           controller: _urlController,
+                           placeholder: "https://youtu.be/...",
+                           style: const TextStyle(color: CupertinoColors.label),
+                         ),
+                         if (_errorMessage != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Text(_errorMessage!, style: const TextStyle(color: CupertinoColors.destructiveRed, fontSize: 13)),
+                            )
+                       ],
                      )
                    else
                      Column(
@@ -60,6 +70,7 @@ class HomeScreen extends StatelessWidget {
                        
                        setState(() {
                          _isDownloading = true;
+                         _errorMessage = null;
                          _statusText = "Analyzing...";
                        });
                        
@@ -95,14 +106,14 @@ class HomeScreen extends StatelessWidget {
                          } else {
                             setState(() {
                               _isDownloading = false;
-                              _statusText = "Download Failed. Check URL.";
+                              _errorMessage = "Invalid video or URL.";
                             });
                          }
                          ytService.dispose();
                        } catch (e) {
                           setState(() {
                              _isDownloading = false;
-                             _statusText = "Error: $e";
+                             _errorMessage = "Error: $e";
                           });
                        }
                     },

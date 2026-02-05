@@ -18,14 +18,38 @@ class YouTubeService {
 
       // 2. Get Manifest
       var manifest = await _yt.videos.streamsClient.getManifest(video.id);
-      // Prefer m4a (mp4 container auth audio) which plays natively on iOS/Android
-      var audioStreamInfo = manifest.audioOnly.withHighestBitrate();
+      
+      // Try to get Audio Only, fallback to Muxed (Video+Audio) if needed
+      AudioStreamInfo? audioStreamInfo;
+      try {
+         audioStreamInfo = manifest.audioOnly.withHighestBitrate();
+      } catch (_) {
+         // Fallback if no audio-only stream
+         if (manifest.muxed.isNotEmpty) {
+           // This is technically VideoStreamInfo but implements AudioStreamInfo interface or similar properties
+           // youtube_explode_dart stream hierarchy:
+           // MuxedStreamInfo extends StreamInfo (has audio)
+           // We need to be careful with types. 
+           // actually manifest.muxed returns MuxedStreamInfo which works differently.
+         }
+      }
+      
+      // Robust Selection
+      StreamInfo? streamInfo = audioStreamInfo;
+      if (streamInfo == null && manifest.muxed.isNotEmpty) {
+         streamInfo = manifest.muxed.withHighestBitrate();
+      }
+
+      if (streamInfo == null) {
+         throw Exception("No suitable audio stream found.");
+      }
 
       // 3. Prepare File Path
       var dir = await getApplicationDocumentsDirectory();
       // Sanitize filename to avoid filesystem errors
       var safeTitle = video.title.replaceAll(RegExp(r'[^\w\s\-]'), '').trim();
-      var filePath = '${dir.path}/$safeTitle.m4a';
+      var extension = streamInfo.container.name; // 'mp4' usually
+      var filePath = '${dir.path}/$safeTitle.$extension';
       var file = File(filePath);
 
       // 4. Download Stream
@@ -33,10 +57,10 @@ class YouTubeService {
         file.deleteSync();
       }
       
-      var stream = _yt.videos.streamsClient.get(audioStreamInfo);
+      var stream = _yt.videos.streamsClient.get(streamInfo);
       var fileStream = file.openWrite();
       
-      int totalSize = audioStreamInfo.size.totalBytes;
+      int totalSize = streamInfo.size.totalBytes;
       int received = 0;
 
       await for (var data in stream) {
@@ -59,7 +83,8 @@ class YouTubeService {
 
     } catch (e) {
       print('Error downloading: $e');
-      return null;
+      // Rethrow to let UI catch it and show the red text
+      throw Exception("Download Error: $e"); 
     }
   }
   
