@@ -43,3 +43,19 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Generated files
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+.packages
+pubspec.lock
+
+# Windows
+windows/flutter/ephemeral/
+windows/runner/resources/
+
+# Misc
+.env
+*.bak
+*.tmp

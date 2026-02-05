@@ -10,119 +10,10 @@ class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   void _showDownloadDialog(BuildContext context) {
-    final TextEditingController _urlController = TextEditingController();
-    
     showCupertinoDialog(
       context: context,
-      barrierDismissible: true, // Allow clicking outside to dismiss if stuck
-      builder: (context) {
-        // Use a StatefulWidget to handle local state (progress)
-        return StatefulBuilder(
-          builder: (context, setState) {
-            double _progress = 0.0;
-            bool _isDownloading = false;
-            String _statusText = "Enter YouTube URL";
-            String? _errorMessage;
-
-            return CupertinoAlertDialog(
-              title: const Text("Download from YouTube"),
-              content: Column(
-                children: [
-                   const SizedBox(height: 10),
-                   if (!_isDownloading)
-                     Column(
-                       children: [
-                         CupertinoTextField(
-                           controller: _urlController,
-                           placeholder: "https://youtu.be/...",
-                           style: const TextStyle(color: CupertinoColors.label),
-                         ),
-                         if (_errorMessage != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8.0),
-                              child: Text(_errorMessage!, style: const TextStyle(color: CupertinoColors.destructiveRed, fontSize: 13)),
-                            )
-                       ],
-                     )
-                   else
-                     Column(
-                       children: [
-                         Text(_statusText, style: const TextStyle(fontSize: 12)),
-                         const SizedBox(height: 10),
-                         LinearProgressIndicator(value: _progress, backgroundColor: CupertinoColors.systemGrey5, valueColor: const AlwaysStoppedAnimation(CupertinoColors.systemGreen)),
-                       ],
-                     ),
-                ],
-              ),
-              actions: [
-                if (!_isDownloading)
-                  CupertinoDialogAction(
-                    child: const Text("Cancel"),
-                    isDestructiveAction: true,
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                if (!_isDownloading)
-                  CupertinoDialogAction(
-                    child: const Text("Download"),
-                    isDefaultAction: true,
-                    onPressed: () async {
-                       if (_urlController.text.isEmpty) return;
-                       
-                       setState(() {
-                         _isDownloading = true;
-                         _errorMessage = null;
-                         _statusText = "Analyzing...";
-                       });
-                       
-                       // Start Download
-                       try {
-                         final ytService = YouTubeService();
-                         final song = await ytService.downloadVideoAsAudio(
-                           _urlController.text, 
-                           (progress) {
-                              setState(() {
-                                _progress = progress;
-                                _statusText = "Downloading: ${(progress * 100).toInt()}%";
-                              });
-                           }
-                         );
-                         
-                         if (song != null) {
-                            if (context.mounted) {
-                              // Add to "Downloads" playlist
-                              final playlistProvider = Provider.of<PlaylistProvider>(context, listen: false);
-                              // Find or create "Downloads" playlist
-                              var downloadPlaylist = playlistProvider.playlists.firstWhere(
-                                (p) => p.name == "Downloads",
-                                orElse: () { 
-                                   playlistProvider.createPlaylist("Downloads");
-                                   return playlistProvider.playlists.firstWhere((p) => p.name == "Downloads");
-                                }
-                              );
-                              
-                              await playlistProvider.addSongsToPlaylist(downloadPlaylist, [song]);
-                              Navigator.pop(context); // Close dialog
-                            }
-                         } else {
-                            setState(() {
-                              _isDownloading = false;
-                              _errorMessage = "Invalid video or URL.";
-                            });
-                         }
-                         ytService.dispose();
-                       } catch (e) {
-                          setState(() {
-                             _isDownloading = false;
-                             _errorMessage = "Error: $e";
-                          });
-                       }
-                    },
-                  ),
-              ],
-            );
-          }
-        );
-      },
+      barrierDismissible: false, // Prevent accidental dismissal during download
+      builder: (context) => const DownloadDialog(),
     );
   }
 
@@ -170,7 +61,7 @@ class HomeScreen extends StatelessWidget {
         middle: const Text('Playlists', style: TextStyle(color: CupertinoColors.white)),
         leading: CupertinoButton(
           padding: EdgeInsets.zero,
-          child: const Icon(CupertinoIcons.cloud_download, color: CupertinoColors.white),
+          child: const Icon(CupertinoIcons.play_rectangle, color: CupertinoColors.systemRed),
           onPressed: () => _showDownloadDialog(context),
         ),
         trailing: CupertinoButton(
@@ -362,5 +253,152 @@ class _PlaylistCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class DownloadDialog extends StatefulWidget {
+  const DownloadDialog({super.key});
+
+  @override
+  State<DownloadDialog> createState() => _DownloadDialogState();
+}
+
+class _DownloadDialogState extends State<DownloadDialog> {
+  final TextEditingController _urlController = TextEditingController();
+  double _progress = 0.0;
+  bool _isDownloading = false;
+  String _statusText = "Enter YouTube URL";
+  String? _errorMessage;
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoAlertDialog(
+      title: const Text("Download from YouTube"),
+      content: Column(
+        children: [
+           const SizedBox(height: 10),
+           if (!_isDownloading)
+             Column(
+               children: [
+                 CupertinoTextField(
+                   controller: _urlController,
+                   placeholder: "https://youtu.be/...",
+                   style: const TextStyle(color: CupertinoColors.label),
+                 ),
+                 if (_errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(_errorMessage!, style: const TextStyle(color: CupertinoColors.destructiveRed, fontSize: 13)),
+                    )
+               ],
+             )
+           else
+             Column(
+               children: [
+                 Text(_statusText, style: const TextStyle(fontSize: 12)),
+                 const SizedBox(height: 10),
+                 LinearProgressIndicator(value: _progress, backgroundColor: CupertinoColors.systemGrey5, valueColor: const AlwaysStoppedAnimation(CupertinoColors.systemGreen)),
+               ],
+             ),
+        ],
+      ),
+      actions: [
+        if (!_isDownloading)
+          CupertinoDialogAction(
+            child: const Text("Cancel"),
+            isDestructiveAction: true,
+            onPressed: () => Navigator.pop(context),
+          ),
+        if (!_isDownloading)
+          CupertinoDialogAction(
+            child: const Text("Download"),
+            isDefaultAction: true,
+            onPressed: _startDownload,
+          ),
+      ],
+    );
+  }
+
+  Future<void> _startDownload() async {
+    if (_urlController.text.isEmpty) {
+      showCupertinoDialog(
+        context: context, 
+        builder: (context) => CupertinoAlertDialog(
+          title: const Text("Input Required"),
+          content: const Text("Please enter a YouTube URL first."),
+          actions: [CupertinoDialogAction(child: const Text("OK"), onPressed: () => Navigator.pop(context))]
+        )
+      );
+      return;
+    }
+    
+    setState(() {
+      _isDownloading = true;
+      _errorMessage = null;
+      _statusText = "Analyzing...";
+    });
+    
+    try {
+      final ytService = YouTubeService();
+      // Listen to the download stream
+      final song = await ytService.downloadVideoAsAudio(
+        _urlController.text, 
+        (progress) {
+          if (!mounted) return;
+          setState(() {
+            _progress = progress;
+            _statusText = "Downloading: ${(progress * 100).toInt()}%";
+          });
+        },
+        onStatus: (status) {
+           if (!mounted) return;
+           setState(() {
+              _statusText = status;
+           });
+        }
+      );
+      
+      if (!mounted) return;
+
+      if (song != null) {
+        final playlistProvider = Provider.of<PlaylistProvider>(context, listen: false);
+        // Find or create "Downloads" playlist
+        var downloadPlaylist = playlistProvider.playlists.firstWhere(
+          (p) => p.name == "Downloads",
+          orElse: () { 
+             playlistProvider.createPlaylist("Downloads");
+             return playlistProvider.playlists.firstWhere((p) => p.name == "Downloads");
+          }
+        );
+        
+        await playlistProvider.addSongsToPlaylist(downloadPlaylist, [song]);
+        if (mounted) Navigator.pop(context); // Close dialog on success
+      } else {
+        setState(() {
+          _isDownloading = false;
+          _errorMessage = "Invalid video or URL.";
+        });
+      }
+      ytService.dispose();
+    } catch (e) {
+       if (!mounted) return;
+       setState(() {
+          _isDownloading = false;
+          _errorMessage = "Error: $e";
+       });
+       showCupertinoDialog(
+         context: context,
+         builder: (context) => CupertinoAlertDialog(
+           title: const Text("Download Failed"),
+           content: Text("Could not download video. \n\nDetails: $e"),
+           actions: [
+             CupertinoDialogAction(
+               child: const Text("OK"),
+               onPressed: () => Navigator.pop(context),
+             )
+           ],
+         )
+       );
+    }
   }
 }
