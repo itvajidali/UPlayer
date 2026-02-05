@@ -49,7 +49,7 @@ class HomeScreen extends StatelessWidget {
       backgroundColor: CupertinoColors.systemBackground,
       navigationBar: CupertinoNavigationBar(
         backgroundColor: CupertinoColors.systemBackground,
-        middle: const Text('Playlists', style: TextStyle(color: CupertinoColors.label)),
+        middle: const Text('Playlists', style: TextStyle(color: CupertinoColors.white)),
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
           onPressed: () => _showCreatePlaylistDialog(context),
@@ -69,7 +69,7 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     "No Playlists",
-                    style: TextStyle(color: CupertinoColors.label.withOpacity(0.5), fontSize: 20),
+                    style: TextStyle(color: CupertinoColors.systemGrey, fontSize: 20),
                   ),
                   const SizedBox(height: 8),
                   CupertinoButton(
@@ -115,8 +115,50 @@ class _PlaylistCard extends StatelessWidget {
 
   const _PlaylistCard({required this.playlist});
 
+  LinearGradient _getGradient(String name) {
+    // Deterministic random colors based on name
+    final int hash = name.hashCode;
+    
+    final movements = [
+      // Purple-Pink
+      const LinearGradient(
+         colors: [Color(0xFF8E2DE2), Color(0xFF4A00E0)],
+         begin: Alignment.topLeft, end: Alignment.bottomRight,
+      ),
+      // Orange-Red
+      const LinearGradient(
+         colors: [Color(0xFFFF512F), Color(0xFFDD2476)],
+         begin: Alignment.topLeft, end: Alignment.bottomRight,
+      ),
+      // Green-Teal
+      const LinearGradient(
+         colors: [Color(0xFF11998e), Color(0xFF38ef7d)],
+         begin: Alignment.topLeft, end: Alignment.bottomRight,
+      ),
+      // Blue-Cyan
+      const LinearGradient(
+         colors: [Color(0xFF00c6ff), Color(0xFF0072ff)],
+         begin: Alignment.topLeft, end: Alignment.bottomRight,
+      ),
+      // Pink-Gold
+      const LinearGradient(
+         colors: [Color(0xFFDA4453), Color(0xFF89216B)],
+         begin: Alignment.topLeft, end: Alignment.bottomRight,
+      ),
+       // Midnight
+      const LinearGradient(
+         colors: [Color(0xFF232526), Color(0xFF414345)],
+         begin: Alignment.topLeft, end: Alignment.bottomRight,
+      ),
+    ];
+    
+    return movements[hash.abs() % movements.length];
+  }
+
   @override
   Widget build(BuildContext context) {
+    final gradient = _getGradient(playlist.name);
+    
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(
@@ -131,30 +173,45 @@ class _PlaylistCard extends StatelessWidget {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: CupertinoColors.secondarySystemBackground,
-                borderRadius: BorderRadius.circular(12),
-                image: playlist.songs.isNotEmpty && playlist.songs.first.artPath != null
-                    ? DecorationImage(
-                        image: NetworkImage(playlist.songs.first.artPath!), // TODO: FileImage for local
-                        fit: BoxFit.cover,
-                      )
-                    : null,
+                gradient: gradient,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(color: gradient.colors.first.withOpacity(0.4), blurRadius: 10, offset: const Offset(0, 4)),
+                ],
+                // Removed image overlay to guarantee gradient visibility and fix "White Card" issue
               ),
-              child: playlist.songs.isEmpty
-                  ? const Center(child: Icon(CupertinoIcons.music_note, size: 40, color: CupertinoColors.systemGrey))
-                  : null,
+              child: Stack(
+                children: [
+                   if (playlist.songs.isEmpty)
+                      const Center(child: Icon(CupertinoIcons.music_note, size: 50, color: Colors.white54)),
+                   
+                   Positioned(
+                     bottom: 12,
+                     left: 12,
+                     right: 12,
+                     child: Text(
+                        playlist.name,
+                        style: const TextStyle(
+                          color: Colors.white, 
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          shadows: [Shadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2))],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                     ),
+                   ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            playlist.name,
-            style: const TextStyle(color: CupertinoColors.label, fontWeight: FontWeight.bold),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          Text(
-            "${playlist.songs.length} songs",
-            style: const TextStyle(color: CupertinoColors.secondaryLabel, fontSize: 12),
+          Padding( // Just song count below
+             padding: const EdgeInsets.only(left: 4),
+             child: Text(
+               "${playlist.songs.length} songs",
+               style: const TextStyle(color: CupertinoColors.systemGrey, fontSize: 13, fontWeight: FontWeight.w500),
+             ),
           ),
         ],
       ),

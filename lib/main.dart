@@ -44,7 +44,13 @@ class UltimatePlayerApp extends StatelessWidget {
         title: 'UPlayer',
         theme: const CupertinoThemeData(
           primaryColor: CupertinoColors.systemGreen,
-          // Removed explicit brightness to allow system default (Dark/Light)
+          brightness: Brightness.dark,
+          scaffoldBackgroundColor: CupertinoColors.black,
+          barBackgroundColor: CupertinoColors.black,
+          textTheme: CupertinoTextThemeData(
+            textStyle: TextStyle(color: CupertinoColors.white, inherit: false),
+            navTitleTextStyle: TextStyle(color: CupertinoColors.white, fontWeight: FontWeight.bold, fontSize: 17, inherit: false),
+          ),
         ),
         home: MainLayout(),
         debugShowCheckedModeBanner: false,

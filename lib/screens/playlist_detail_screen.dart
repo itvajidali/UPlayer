@@ -8,6 +8,7 @@ import 'package:ultimate_player/models/playlist.dart';
 import 'package:ultimate_player/models/song.dart';
 import 'package:ultimate_player/providers/audio_provider.dart';
 import 'package:ultimate_player/providers/playlist_provider.dart';
+import 'package:ultimate_player/widgets/mini_player.dart';
 import 'package:uuid/uuid.dart';
 
 class PlaylistDetailScreen extends StatelessWidget {
@@ -63,8 +64,11 @@ class PlaylistDetailScreen extends StatelessWidget {
         ),
       ),
       child: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
+            Positioned.fill(
+              child: Column(
+                children: [
              // Playlist Header
              const SizedBox(height: 20),
              Container(
@@ -86,61 +90,137 @@ class PlaylistDetailScreen extends StatelessWidget {
              ),
              const SizedBox(height: 20),
              
-             // Play Button
-             if (playlist.songs.isNotEmpty)
-               CupertinoButton.filled(
-                 borderRadius: BorderRadius.circular(30),
-                 child: const Row(
-                   mainAxisSize: MainAxisSize.min,
-                   children: [
-                     Icon(CupertinoIcons.play_fill),
-                     SizedBox(width: 8),
-                     Text("Play All"),
-                   ],
+              // Play Button & Add Songs
+              if (playlist.songs.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                       CupertinoButton.filled(
+                         borderRadius: BorderRadius.circular(30),
+                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                         child: const Row(
+                           children: [
+                             Icon(CupertinoIcons.play_fill),
+                             SizedBox(width: 8),
+                             Text("Play All"),
+                           ],
+                         ),
+                         onPressed: () {
+                            Provider.of<AudioProvider>(context, listen: false).playPlaylist(playlist.songs);
+                         },
+                       ),
+                       const SizedBox(width: 16),
+                       CupertinoButton(
+                         color: CupertinoColors.secondarySystemBackground,
+                         borderRadius: BorderRadius.circular(30),
+                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                         child: const Row(
+                           children: [
+                             Icon(CupertinoIcons.add, color: CupertinoColors.label),
+                             SizedBox(width: 8),
+                             Text("Add Songs", style: TextStyle(color: CupertinoColors.label)),
+                           ],
+                         ),
+                         onPressed: () => _pickFiles(context),
+                       ),
+                    ],
+                  ),
+                )
+              else 
+                 CupertinoButton(
+                   color: CupertinoColors.systemGreen,
+                   borderRadius: BorderRadius.circular(30),
+                   child: const Text("Import Songs"),
+                   onPressed: () => _pickFiles(context),
                  ),
-                 onPressed: () {
-                    Provider.of<AudioProvider>(context, listen: false).playPlaylist(playlist.songs);
-                 },
-               ),
-             
-             const SizedBox(height: 20),
-             
-             // Song List
-             Expanded(
-               child: Consumer<PlaylistProvider>( // Listen to updates (e.g. after adding songs)
-                 builder: (context, provider, child) {
-                    // Re-fetch playlist? Or assume the object passed is mutated?
-                    // Hive objects update in place usually, but let's be safe:
+              
+              const SizedBox(height: 10),
+              
+              // Song List
+              Expanded(
+                child: Consumer2<PlaylistProvider, AudioProvider>(
+                  builder: (context, playlistProvider, audioProvider, child) {
+                   // Always fetch the latest version of the playlist
+                   // We use 'firstWhere' to find the updated playlist object by ID
+                   final currentPlaylist = playlistProvider.playlists.firstWhere(
+                      (p) => p.id == playlist.id, 
+                      orElse: () => playlist // Fallback
+                   );
+
+                   if (currentPlaylist.songs.isEmpty) {
+                      return Center(
+                        child:Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Text(
+                            "No songs yet.\nTap 'Add Songs' to start.",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: CupertinoColors.systemGrey.withOpacity(0.7)),
+                          ),
+                        ),
+                      );
+                   }
+
                    return ListView.builder(
-                     itemCount: playlist.songs.length,
+                     itemCount: currentPlaylist.songs.length,
                      itemBuilder: (context, index) {
-                       final song = playlist.songs[index];
+                       final song = currentPlaylist.songs[index];
+                       final bool isActive = audioProvider.currentSong?.id == song.id;
+                       
                        return Material(
-                         color: Colors.transparent,
+                         color: isActive ? CupertinoColors.systemGreen.withOpacity(0.15) : Colors.transparent,
                          child: ListTile(
-                           leading: const Icon(CupertinoIcons.music_note_2, color: CupertinoColors.systemGrey),
-                           title: Text(song.title, style: const TextStyle(color: CupertinoColors.label)),
-                           subtitle: Text(song.artist, style: const TextStyle(color: CupertinoColors.secondaryLabel)),
+                           leading: Icon(
+                                isActive ? CupertinoIcons.speaker_2_fill : CupertinoIcons.music_note_2, 
+                                color: isActive ? CupertinoColors.systemGreen : CupertinoColors.systemGrey
+                           ),
+                           title: Text(
+                               song.title, 
+                               style: TextStyle(
+                                   // Explicitly using white/label for better visibility in all modes
+                                   color: isActive ? CupertinoColors.systemGreen : CupertinoColors.white,
+                                   fontWeight: isActive ? FontWeight.bold : FontWeight.w500
+                               ),
+                               maxLines: 1,
+                               overflow: TextOverflow.ellipsis,
+                           ),
+                           subtitle: Text(
+                               song.artist, 
+                               style: TextStyle(
+                                 // Explicitly lighter grey for dark mode visibility
+                                 color: isActive ? CupertinoColors.systemGreen.withOpacity(0.8) : CupertinoColors.systemGrey2
+                               ),
+                               maxLines: 1,
+                               overflow: TextOverflow.ellipsis,
+                           ),
                            onTap: () {
                              Provider.of<AudioProvider>(context, listen: false)
-                                .playPlaylist(playlist.songs, initialIndex: index);
+                                .playPlaylist(currentPlaylist.songs, initialIndex: index);
                            },
                            trailing: CupertinoButton(
                              padding: EdgeInsets.zero,
                              child: const Icon(CupertinoIcons.ellipsis, color: CupertinoColors.systemGrey),
-                             onPressed: () {
-                               // TODO: Delete options etc
-                             },
+                             onPressed: () {},
                            ),
                          ),
                        );
                      },
                    );
-                 },
-               ),
-             ),
+                  },
+                ),
+              ),
              
-             const SizedBox(height: 60), // MiniPlayer padding
+             const SizedBox(height: 100), // Space for MiniPlayer
+          ],
+        ),
+      ),
+      const Positioned(
+        left: 0, 
+        right: 0, 
+        bottom: 0, 
+        child: MiniPlayer(),
+      ),
           ],
         ),
       ),
