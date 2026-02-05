@@ -50,4 +50,10 @@ class PlaylistProvider extends ChangeNotifier {
       _playlists.remove(playlist);
       notifyListeners();
   }
+
+  Future<void> removeSongFromPlaylist(Playlist playlist, Song song) async {
+    playlist.songs.removeWhere((s) => s.id == song.id);
+    playlist.save();
+    notifyListeners();
+  }
 }

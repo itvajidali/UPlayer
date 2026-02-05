@@ -279,6 +279,29 @@ class _PlaylistCard extends StatelessWidget {
           ),
         );
       },
+      onLongPress: () {
+        showCupertinoDialog(
+          context: context, 
+          builder: (context) => CupertinoAlertDialog(
+            title: const Text("Delete Playlist?"),
+            content: Text("Are you sure you want to delete '${playlist.name}'?"),
+            actions: [
+              CupertinoDialogAction(
+                child: const Text("Cancel"),
+                onPressed: () => Navigator.pop(context),
+              ),
+              CupertinoDialogAction(
+                isDestructiveAction: true,
+                child: const Text("Delete"),
+                onPressed: () {
+                  Provider.of<PlaylistProvider>(context, listen: false).deletePlaylist(playlist);
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          )
+        );
+      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

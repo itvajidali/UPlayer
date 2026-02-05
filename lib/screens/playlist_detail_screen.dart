@@ -205,7 +205,77 @@ class PlaylistDetailScreen extends StatelessWidget {
                            trailing: CupertinoButton(
                              padding: EdgeInsets.zero,
                              child: const Icon(CupertinoIcons.ellipsis, color: CupertinoColors.systemGrey),
-                             onPressed: () {},
+                             onPressed: () {
+                               showCupertinoModalPopup(
+                                 context: context,
+                                 builder: (context) => CupertinoActionSheet(
+                                   title: Text(song.title),
+                                   actions: [
+                                     CupertinoActionSheetAction(
+                                       child: const Text("Add to Playlist..."),
+                                       onPressed: () {
+                                         Navigator.pop(context); // Close sheet
+                                         // Show Playlist Selection Dialog
+                                         showCupertinoDialog(
+                                           context: context,
+                                           builder: (context) {
+                                              final allPlaylists = Provider.of<PlaylistProvider>(context, listen: false)
+                                                 .playlists
+                                                 .where((p) => p.id != currentPlaylist.id) // Exclude current
+                                                 .toList();
+                                              
+                                              return CupertinoAlertDialog(
+                                                title: const Text("Add to Playlist"),
+                                                content: allPlaylists.isEmpty 
+                                                   ? const Text("No other playlists available.")
+                                                   : SizedBox(
+                                                       height: 200, // Limit height
+                                                       child: ListView.builder(
+                                                         shrinkWrap: true,
+                                                         itemCount: allPlaylists.length,
+                                                         itemBuilder: (context, i) {
+                                                            final target = allPlaylists[i];
+                                                            return CupertinoButton(
+                                                              padding: const EdgeInsets.symmetric(vertical: 12),
+                                                              child: Text(target.name),
+                                                              onPressed: () {
+                                                                 Provider.of<PlaylistProvider>(context, listen: false)
+                                                                    .addSongsToPlaylist(target, [song]);
+                                                                 Navigator.pop(context); // Close Dialog
+                                                                 // Optional success feedback could be added here
+                                                              },
+                                                            );
+                                                         },
+                                                       ),
+                                                   ),
+                                                actions: [
+                                                  CupertinoDialogAction(
+                                                    child: const Text("Cancel"),
+                                                    onPressed: () => Navigator.pop(context),
+                                                  )
+                                                ],
+                                              );
+                                           }
+                                         );
+                                       },
+                                     ),
+                                     CupertinoActionSheetAction(
+                                       isDestructiveAction: true,
+                                       child: const Text("Remove from this Playlist"),
+                                       onPressed: () {
+                                         Provider.of<PlaylistProvider>(context, listen: false)
+                                            .removeSongFromPlaylist(currentPlaylist, song);
+                                         Navigator.pop(context);
+                                       },
+                                     ),
+                                   ],
+                                   cancelButton: CupertinoActionSheetAction(
+                                     child: const Text("Cancel"),
+                                     onPressed: () => Navigator.pop(context),
+                                   ),
+                                 ),
+                               );
+                             },
                            ),
                          ),
                        );
